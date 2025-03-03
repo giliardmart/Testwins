@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+            color: #333333;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+        }
+
+        .login-container button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .login-container button:hover {
+            background-color: #45a049;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .register-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #4caf50;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="E-mail" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <button id="login-btn">Entrar</button>
+        <div class="error-message" id="error-message"></div>
+        <div class="register-link">
+            Não tem senha? <a href="register.html">Crie aqui</a>
+        </div>
+    </div>
+
+    <script>
+        // Função para calcular o hash SHA-256
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Função para verificar login
+        document.getElementById("login-btn").addEventListener("click", async () => {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const errorMessage = document.getElementById("error-message");
+
+            if (!email || !password) {
+                errorMessage.textContent = "Por favor, preencha todos os campos.";
+                return;
+            }
+
+            // Calcula o hash da senha
+            const hashedPassword = await sha256(password);
+
+            // Lê o arquivo users.txt
+            fetch("users.txt")
+                .then(response => response.text())
+                .then(data => {
+                    const users = data.split("\n").map(line => line.split(":"));
+                    const user = users.find(([userEmail]) => userEmail === email);
+
+                    if (user && user[1] === hashedPassword) {
+                        const timeRemaining = parseInt(user[2]);
+                        if (timeRemaining > 0) {
+                            // Redireciona para a página principal
+                            window.location.href = "main.html";
+                        } else {
+                            errorMessage.textContent = "Tempo de acesso expirado. Entre em contato com o administrador.";
+                        }
+                    } else {
+                        errorMessage.textContent = "E-mail ou senha inválidos.";
+                    }
+                })
+                .catch(() => {
+                    errorMessage.textContent = "Erro ao acessar o banco de dados.";
+                });
+        });
+    </script>
+</body>
+</html>

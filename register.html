@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Senha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .register-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        .register-container h2 {
+            margin-bottom: 20px;
+            color: #333333;
+        }
+
+        .register-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+        }
+
+        .register-container button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .register-container button:hover {
+            background-color: #45a049;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .login-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #4caf50;
+            text-decoration: none;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h2>Criar Senha</h2>
+        <input type="email" id="email" placeholder="E-mail" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <button id="register-btn">Criar Senha</button>
+        <div class="error-message" id="error-message"></div>
+        <div class="login-link">
+            Já tem senha? <a href="index.html">Faça login aqui</a>
+        </div>
+    </div>
+
+    <script>
+        // Função para calcular o hash SHA-256
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Função para criar senha
+        document.getElementById("register-btn").addEventListener("click", async () => {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const errorMessage = document.getElementById("error-message");
+
+            if (!email || !password) {
+                errorMessage.textContent = "Por favor, preencha todos os campos.";
+                return;
+            }
+
+            // Calcula o hash da senha
+            const hashedPassword = await sha256(password);
+
+            // Lê o arquivo users.txt
+            fetch("users.txt")
+                .then(response => response.text())
+                .then(data => {
+                    const users = data.split("\n").map(line => line.split(":"));
+                    const user = users.find(([userEmail]) => userEmail === email);
+
+                    if (!user) {
+                        errorMessage.textContent = "Este e-mail não está autorizado. Entre em contato com o administrador.";
+                        return;
+                    }
+
+                    if (user[1]) {
+                        errorMessage.textContent = "Este e-mail já possui uma senha cadastrada.";
+                        return;
+                    }
+
+                    // Define um tempo de acesso aleatório entre 15 e 30 minutos
+                    const timeRemaining = Math.floor(Math.random() * 16) + 15; // 15 a 30 minutos
+
+                    // Atualiza o arquivo users.txt com a senha e o tempo de acesso
+                    const updatedUsers = users.map(line => {
+                        if (line[0] === email) {
+                            return [email, hashedPassword, timeRemaining].join(":");
+                        }
+                        return line.join(":");
+                    }).join("\n");
+
+                    fetch("users.txt", {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain" },
+                        body: updatedUsers,
+                    }).then(() => {
+                        alert("Senha criada com sucesso!");
+                        window.location.href = "index.html";
+                    }).catch(() => {
+                        errorMessage.textContent = "Erro ao salvar a senha.";
+                    });
+                })
+                .catch(() => {
+                    errorMessage.textContent = "Erro ao acessar o banco de dados.";
+                });
+        });
+    </script>
+</body>
+</html>
